@@ -7,14 +7,15 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.util.CollectionUtils;
 import ua.nure.tppr.vorozhka.lab1.analitic.ResolutionSolver;
 import ua.nure.tppr.vorozhka.lab1.model.*;
-import ua.nure.tppr.vorozhka.lab1.repository.AlternativeRepository;
-import ua.nure.tppr.vorozhka.lab1.repository.ComparingTypeRepository;
-import ua.nure.tppr.vorozhka.lab1.repository.MarkRepository;
-import ua.nure.tppr.vorozhka.lab1.repository.MarkTypeRepository;
+import ua.nure.tppr.vorozhka.lab1.repository.*;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @SpringBootApplication
 public class Lab1Application implements CommandLineRunner {
@@ -34,6 +35,9 @@ public class Lab1Application implements CommandLineRunner {
 
     @Autowired
     private MarkTypeRepository markTypeRepository;
+
+    @Autowired
+    private CriterionRepository criterionRepository;
 
     @Autowired
     private ResolutionSolver resolutionSolver;
@@ -62,10 +66,14 @@ public class Lab1Application implements CommandLineRunner {
                 switch (command) {
                     case "-help": {
                         System.out.println("*** HELP ***");
-                        System.out.println("-getComparingTypes - gets names of all available comparing types");
                         System.out.println("-addComparingType {comparingTypeName} - adds comparing type with name");
+                        System.out.println("-getComparingTypes - gets names of all available comparing types");
                         System.out.println("-addMarkType - adds mark type");
+                        System.out.println("-getMarkTypes - gets all mark types");
                         System.out.println("-addMark {markTypeName} - adds mark to mark type");
+                        System.out.println("-getMarks {markTypeName} - gets marks by mark type");
+                        System.out.println("-addCriterion {comparingTypeName} - adds criterion to comparing type group");
+                        System.out.println("-getCriteria {comparingTypeName} - gets criteria by comparing type");
                         System.out.println("-addVector {comparingTypeName} - adds vector to comparing type group");
                         System.out.println("-prioritize {comparingTypeName} - prioritize vectors in comparing type by declared criteria");
                         System.out.println("-help - shows all available commands");
@@ -93,6 +101,12 @@ public class Lab1Application implements CommandLineRunner {
                         System.out.println("Mark type was added successfully");
                         break;
                     }
+                    case "-getMarkTypes": {
+                        System.out.println(((List<MarkType>) markTypeRepository.findAll()).stream()
+                                .map(markType -> "\t\t{ " + markType.getName() + ", " + markType.getUnit() + ", " + markType.getValueType() + " };\n")
+                                .collect(Collectors.toList()));
+                        break;
+                    }
                     case "-addMark": {
                         MarkType markType = markTypeRepository.getByName(argument);
                         System.out.print("\t\tPlease enter mark value, it should be unique - ");
@@ -102,32 +116,61 @@ public class Lab1Application implements CommandLineRunner {
                         Mark newMark = Mark.builder().markTypeId(markType.getId()).value(markValue).numericValue(markNumericValue).build();
                         markRepository.save(newMark);
                         System.out.println("Mark was added successfully");
+                        break;
+                    }
+                    case "-getMarks": {
+                        MarkType markType = markTypeRepository.getByName(argument);
+                        System.out.println(markRepository.getByMarkTypeId(markType.getId()).stream()
+                                .map(mark -> "\t\t{ " + mark + " };\n").collect(Collectors.toList()));
+                        break;
+                    }
+                    case "-addCriterion": {
+                        ComparingType comparingType = comparingTypeRepository.getByName(argument);
+                        System.out.print("\t\tPlease enter criterion name, it should be unique - ");
+                        String criterionName = SCANNER.nextLine();
+                        System.out.print("\t\tPlease enter criterion numeric weight - ");
+                        int criterionWeight = Integer.valueOf(SCANNER.nextLine());
+                        System.out.println("\t\tPlease choose one of mark types described below");
+                        System.out.print("\t\t");
+                        System.out.println(((List<MarkType>) markTypeRepository.findAll()).stream()
+                                .map(MarkType::getName)
+                                .collect(Collectors.toList()));
+                        System.out.print("\t\t");
+                        String markTypeName = SCANNER.nextLine();
+                        MarkType markType = markTypeRepository.getByName(markTypeName);
+                        Criterion criterion = Criterion.builder().comparingType(comparingType)
+                                .name(criterionName)
+                                .weight(criterionWeight)
+                                .markType(markType).build();
+                        criterionRepository.save(criterion);
+                        System.out.println("Criterion was added successfully");
+                        break;
+                    }
+                    case "-getCriteria": {
+                        ComparingType comparingType = comparingTypeRepository.getByName(argument);
+                        System.out.println(criterionRepository.getByComparingType(comparingType));
+                        break;
                     }
                     case "-addVector": {
                         ComparingType comparingType = comparingTypeRepository.getByName(argument);
-                        List<Alternative> alternatives = comparingType.getAlternatives();
-                        List<Criterion> criteria = alternatives.stream().findAny()
-                                .orElseThrow(() -> new RuntimeException("Oops! Something went wrong in our calculation"))
-                                .getCriteria();
+                        List<Criterion> criteria = criterionRepository.getByComparingType(comparingType);
 
-                        if (CollectionUtils.isEmpty(alternatives) || CollectionUtils.isEmpty(criteria)) {
+                        if (CollectionUtils.isEmpty(criteria)) {
                             System.out.println("No criteria found, please add criteria, first");
                             break;
                         }
 
                         System.out.print("\t\tPlease enter alternative name, it should be unique - ");
                         String alternativeName = SCANNER.nextLine();
-                        List<Criterion> newVectorCriteria = new ArrayList<>();
+                        List<Vector> vectors = new ArrayList<>();
                         Alternative alternative = Alternative.builder()
                                 .name(alternativeName)
-                                .criteria(newVectorCriteria)
+                                .vectors(vectors)
                                 .comparingType(comparingType)
                                 .build();
                         System.out.printf("\t\tPlease mark %s criteria described below %s", criteria.size(), System.lineSeparator());
 
                         for (Criterion criterion : criteria) {
-                            String criterionName = criterion.getName();
-
                             List<Mark> marks = markRepository.getByMarkTypeId(criterion.getMarkType().getId());
                             System.out.println("\t\tPlease choose one of mark described below");
                             marks.stream().map(mark -> "\t\t\t\t" + mark.getValue() + ", " + mark.getNumericValue())
@@ -136,12 +179,12 @@ public class Lab1Application implements CommandLineRunner {
                             String markValue = SCANNER.nextLine();
                             Mark foundMark = markRepository.getByValueAndMarkTypeId(markValue, criterion.getMarkType().getId());
 
-                            Criterion newVectorCriterion = Criterion.builder().name(criterionName)
-                                    .weight(criterion.getWeight())
-                                    .markType(criterion.getMarkType())
-                                    .alternatives(Collections.singletonList(alternative))
+                            Vector newVector = Vector.builder()
+                                    .alternative(alternative)
+                                    .criterion(criterion)
                                     .mark(foundMark).build();
-                            newVectorCriteria.add(newVectorCriterion);
+
+                            vectors.add(newVector);
                         }
 
                         alternativeRepository.save(alternative);

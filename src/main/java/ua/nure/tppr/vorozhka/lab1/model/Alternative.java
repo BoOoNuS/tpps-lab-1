@@ -34,23 +34,23 @@ public class Alternative implements Comparable<Alternative> {
     @JoinColumn(name = "comparing_type_id", nullable = false)
     private ComparingType comparingType;
 
-    @ManyToMany(mappedBy = "alternatives", cascade = CascadeType.ALL)
-    private List<Criterion> criteria;
+    @OneToMany(mappedBy = "alternative", cascade = CascadeType.ALL)
+    private List<Vector> vectors;
 
     @Override
     public int compareTo(Alternative input) {
         int result = 0;
-        Map<String, Criterion> nameToCriteria = input.getCriteria().stream()
-                .collect(Collectors.toMap(Criterion::getName, Function.identity()));
+        Map<Integer, Vector> nameToCriteria = input.getVectors().stream()
+                .collect(Collectors.toMap(Vector::getId, Function.identity()));
 
-        for (Criterion criteriaToCompare : criteria) {
-            result += criteriaToCompare.compareTo(nameToCriteria.get(criteriaToCompare.getName()));
+        for (Vector vectorToCompare : vectors) {
+            result += vectorToCompare.compareTo(nameToCriteria.get(vectorToCompare.getId()));
         }
         return result;
     }
 
     @Override
     public String toString() {
-        return "\t\tAlternative { " + name + System.lineSeparator() + criteria + " };" + System.lineSeparator();
+        return "\t\tAlternative { " + name + System.lineSeparator() + vectors + " };" + System.lineSeparator();
     }
 }

@@ -19,7 +19,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "criteria")
-public class Criterion implements Comparable<Criterion> {
+public class Criterion {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,34 +34,14 @@ public class Criterion implements Comparable<Criterion> {
     private MarkType markType;
 
     @ManyToOne
-    @JoinColumn(name = "mark_id", nullable = false)
-    private Mark mark;
+    @JoinColumn(name = "comparing_type_id", nullable = false)
+    private ComparingType comparingType;
 
-    @ManyToMany(cascade = CascadeType.ALL)
-    @JoinTable(
-            name = "vectors",
-            joinColumns = { @JoinColumn(name = "criteria_id") },
-            inverseJoinColumns = { @JoinColumn(name = "alternative_id") }
-    )
-    private List<Alternative> alternatives;
-
-    @Override
-    public int compareTo(Criterion input) {
-        Integer value = mark.getNumericValue();
-        Integer inputValue = input.getMark().getNumericValue();
-        int result = value.compareTo(inputValue);
-
-        if (result > 0) {
-            return weight * -1;
-        } else if (result < 0) {
-            return input.getWeight();
-        }
-
-        return 0;
-    }
+    @OneToMany(mappedBy = "criterion", cascade = CascadeType.ALL)
+    private List<Vector> vectors;
 
     @Override
     public String toString() {
-        return "\t\t\t\tVector { " + name + ", " + weight + ", " + mark + ", " + markType + " };" + System.lineSeparator();
+        return "\t\tCriterion { " + name + ", " + weight + ", " + markType + " };" + System.lineSeparator();
     }
 }
