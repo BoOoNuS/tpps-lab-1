@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 public class Alternative implements Comparable<Alternative> {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
     private String name;
@@ -33,16 +34,16 @@ public class Alternative implements Comparable<Alternative> {
     @JoinColumn(name = "comparing_type_id", nullable = false)
     private ComparingType comparingType;
 
-    @ManyToMany(mappedBy = "alternatives")
-    private List<Criteria> criteria;
+    @ManyToMany(mappedBy = "alternatives", cascade = CascadeType.ALL)
+    private List<Criterion> criteria;
 
     @Override
     public int compareTo(Alternative input) {
         int result = 0;
-        Map<String, Criteria> nameToCriteria = input.getCriteria().stream()
-                .collect(Collectors.toMap(Criteria::getName, Function.identity()));
+        Map<String, Criterion> nameToCriteria = input.getCriteria().stream()
+                .collect(Collectors.toMap(Criterion::getName, Function.identity()));
 
-        for (Criteria criteriaToCompare : criteria) {
+        for (Criterion criteriaToCompare : criteria) {
             result += criteriaToCompare.compareTo(nameToCriteria.get(criteriaToCompare.getName()));
         }
         return result;

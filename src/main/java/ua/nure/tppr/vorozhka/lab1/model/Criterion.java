@@ -18,9 +18,11 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Criteria implements Comparable<Criteria> {
+@Table(name = "criteria")
+public class Criterion implements Comparable<Criterion> {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
     private String name;
@@ -35,7 +37,7 @@ public class Criteria implements Comparable<Criteria> {
     @JoinColumn(name = "mark_id", nullable = false)
     private Mark mark;
 
-    @ManyToMany
+    @ManyToMany(cascade = CascadeType.ALL)
     @JoinTable(
             name = "vectors",
             joinColumns = { @JoinColumn(name = "criteria_id") },
@@ -44,7 +46,7 @@ public class Criteria implements Comparable<Criteria> {
     private List<Alternative> alternatives;
 
     @Override
-    public int compareTo(Criteria input) {
+    public int compareTo(Criterion input) {
         Integer value = mark.getNumericValue();
         Integer inputValue = input.getMark().getNumericValue();
         int result = value.compareTo(inputValue);

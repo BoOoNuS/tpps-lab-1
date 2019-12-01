@@ -9,4 +9,6 @@ import ua.nure.tppr.vorozhka.lab1.model.MarkType;
  * @author Stanislav Vorozhka
  */
 public interface MarkTypeRepository extends CrudRepository<MarkType, Integer> {
+
+    MarkType getByName(String name);
 }

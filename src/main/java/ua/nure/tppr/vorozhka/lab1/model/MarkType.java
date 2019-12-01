@@ -21,6 +21,7 @@ import javax.persistence.*;
 public class MarkType {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
     private String name;
