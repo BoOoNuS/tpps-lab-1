@@ -37,6 +37,9 @@ public class Alternative implements Comparable<Alternative> {
     @OneToMany(mappedBy = "alternative", cascade = CascadeType.ALL)
     private List<Vector> vectors;
 
+    @Transient
+    private int voteMark;
+
     @Override
     public int compareTo(Alternative input) {
         int result = 0;
@@ -51,6 +54,6 @@ public class Alternative implements Comparable<Alternative> {
 
     @Override
     public String toString() {
-        return "\t\tAlternative { " + name + System.lineSeparator() + vectors + " };" + System.lineSeparator();
+        return "\t\tAlternative { " + name + ", " + voteMark + System.lineSeparator() + vectors + " };" + System.lineSeparator();
     }
 }

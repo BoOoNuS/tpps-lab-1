@@ -5,10 +5,8 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.util.CollectionUtils;
-import ua.nure.tppr.vorozhka.lab1.analitic.ResolutionSolver;
-import ua.nure.tppr.vorozhka.lab1.model.*;
-import ua.nure.tppr.vorozhka.lab1.repository.*;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -16,6 +14,21 @@ import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import ua.nure.tppr.vorozhka.lab1.analitic.ResolutionSolver;
+import ua.nure.tppr.vorozhka.lab1.model.Alternative;
+import ua.nure.tppr.vorozhka.lab1.model.ComparingType;
+import ua.nure.tppr.vorozhka.lab1.model.Criterion;
+import ua.nure.tppr.vorozhka.lab1.model.Mark;
+import ua.nure.tppr.vorozhka.lab1.model.MarkType;
+import ua.nure.tppr.vorozhka.lab1.model.ValueType;
+import ua.nure.tppr.vorozhka.lab1.model.Vector;
+import ua.nure.tppr.vorozhka.lab1.model.Vote;
+import ua.nure.tppr.vorozhka.lab1.repository.AlternativeRepository;
+import ua.nure.tppr.vorozhka.lab1.repository.ComparingTypeRepository;
+import ua.nure.tppr.vorozhka.lab1.repository.CriterionRepository;
+import ua.nure.tppr.vorozhka.lab1.repository.MarkRepository;
+import ua.nure.tppr.vorozhka.lab1.repository.MarkTypeRepository;
 
 @SpringBootApplication
 public class Lab1Application implements CommandLineRunner {
@@ -76,6 +89,7 @@ public class Lab1Application implements CommandLineRunner {
                         System.out.println("-getCriteria {comparingTypeName} - gets criteria by comparing type");
                         System.out.println("-addVector {comparingTypeName} - adds vector to comparing type group");
                         System.out.println("-prioritize {comparingTypeName} - prioritize vectors in comparing type by declared criteria");
+                        System.out.println("-vote {comparingTypeName} - vote for alternatives in comparing type");
                         System.out.println("-help - shows all available commands");
                         System.out.println("-exit - close application");
                         break;
@@ -112,7 +126,7 @@ public class Lab1Application implements CommandLineRunner {
                         System.out.print("\t\tPlease enter mark value, it should be unique - ");
                         String markValue = SCANNER.nextLine();
                         System.out.print("\t\tPlease enter mark numeric value - ");
-                        int markNumericValue = Integer.valueOf(SCANNER.nextLine());
+                        int markNumericValue = Integer.parseInt(SCANNER.nextLine());
                         Mark newMark = Mark.builder().markTypeId(markType.getId()).value(markValue).numericValue(markNumericValue).build();
                         markRepository.save(newMark);
                         System.out.println("Mark was added successfully");
@@ -129,7 +143,7 @@ public class Lab1Application implements CommandLineRunner {
                         System.out.print("\t\tPlease enter criterion name, it should be unique - ");
                         String criterionName = SCANNER.nextLine();
                         System.out.print("\t\tPlease enter criterion numeric weight - ");
-                        int criterionWeight = Integer.valueOf(SCANNER.nextLine());
+                        int criterionWeight = Integer.parseInt(SCANNER.nextLine());
                         System.out.println("\t\tPlease choose one of mark types described below");
                         System.out.print("\t\t");
                         System.out.println(((List<MarkType>) markTypeRepository.findAll()).stream()
@@ -193,6 +207,50 @@ public class Lab1Application implements CommandLineRunner {
                     }
                     case "-prioritize": {
                         System.out.println(resolutionSolver.prioritize(comparingTypeRepository.getByName(argument)));
+                        break;
+                    }
+                    case "-vote": {
+                        ComparingType comparingType = comparingTypeRepository.getByName(argument);
+                        List<Alternative> alternatives = comparingType.getAlternatives();
+                        System.out.println("Count of alternatives: " + alternatives.size());
+                        System.out.println("Alternatives to vote: " + alternatives);
+                        boolean isContinue = true;
+                        List<Vote> votes = new ArrayList<>();
+
+                        while (isContinue) {
+                            System.out.print("\t\tPlease enter voter name, it should be unique - ");
+                            String voterName = SCANNER.nextLine();
+                            Alternative[] indexedAlternatives = new Alternative[alternatives.size()];
+
+                            for (Alternative alternative : alternatives) {
+                                System.out.print(
+                                    MessageFormat.format(
+                                        "\t\tPlease enter the score for alternative - {0}, from 0 to {1}." +
+                                            " Where 0 is the highest score and {2} is the lowest. Each score should be unique. Score: ",
+                                        alternative.getName(), alternatives.size() - 1, alternatives.size() - 1));
+                                int score = Integer.parseInt(SCANNER.nextLine());
+                                indexedAlternatives[score] = alternative;
+                            }
+                            Vote vote =
+                                Vote.builder().voterName(voterName).indexedAlternative(Arrays.asList(indexedAlternatives)).build();
+                            votes.add(vote);
+                            System.out.print("\t\tWould you add one more voter? (true/false): ");
+                            isContinue = Boolean.parseBoolean(SCANNER.nextLine());
+                            System.out.println("===================================");
+                        }
+                        System.out.print("\t\tPlease choose decision making strategy (Conders/Copland): ");
+                        String decisionMakingStrategy = SCANNER.nextLine();
+                        if ("Conders".equals(decisionMakingStrategy.trim())) {
+                            Alternative[] result = resolutionSolver.makeDecisionConders(votes);
+                            System.out.print("Result sorted from the highest to the lowest: ");
+                            System.out.println(Arrays.toString(result));
+                        } else if ("Copland".equals(decisionMakingStrategy.trim())) {
+                            Alternative[] result = resolutionSolver.makeDecisionCopland(votes);
+                            System.out.print("Result sorted from the highest to the lowest: ");
+                            System.out.println(Arrays.toString(result));
+                        } else {
+                            System.out.println("Entered strategy not found!");
+                        }
                         break;
                     }
                     case "-exit": {
